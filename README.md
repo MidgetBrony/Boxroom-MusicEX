@@ -16,16 +16,17 @@ MusicEX improves the Albums music library in BOXROOM. It scans nested music fold
 ## Installation
 
 1. Install [MelonLoader](https://melonwiki.xyz/) for BOXROOM.
-2. Close BOXROOM if it is running.
-3. Copy `Boxroom_MusicEX.dll` into the game's `Mods` folder. A standard Steam installation will resemble:
+2. Install `ModsPanel.dll` in BOXROOM's `Mods` folder.
+3. Close BOXROOM if it is running.
+4. Copy `Boxroom_MusicEX.dll` into the game's `Mods` folder. A standard Steam installation will resemble:
 
    ```text
    ...\steamapps\common\My Game Room\Mods\Boxroom_MusicEX.dll
    ```
 
-4. Start BOXROOM.
-5. Open the Albums music-library setting and select the folder containing your music.
-6. Rescan the Albums library if BOXROOM has already scanned that folder before.
+5. Start BOXROOM.
+6. Open the Albums music-library setting and select the folder containing your music.
+7. Rescan the Albums library if BOXROOM has already scanned that folder before.
 
 The MelonLoader console should report that MusicEX initialized and queued folders for BOXROOM's album scan.
 
@@ -59,6 +60,28 @@ Metadata is selected in this order:
 5. `Unknown Artist` or `Unknown Album` when nothing else is available.
 
 For untagged tracks, the filename is shown as the track title.
+
+## Optional Metadata Enhancement
+
+Recursive folder scanning is always enabled. Embedded metadata enhancement is optional and defaults to **off** so playlist-style folders keep BOXROOM's original folder names and filename order.
+
+To enable embedded album, artist, track-number, track-title, and artwork metadata:
+
+1. Open BOXROOM's **Mods** tab.
+2. Select **Mod Settings**.
+3. Open the **BOXROOM MusicEX** section.
+4. Enable **Enable embedded metadata**. MusicEX immediately rescans the Albums library.
+
+The warning beneath the setting explains that playlist folders may contain conflicting album tags. Disabling the checkbox also rescans immediately and restores BOXROOM's folder-based album names and ordering.
+
+Advanced users can set the same preference manually in `UserData\MelonPreferences.cfg`:
+
+```ini
+[Boxroom-MusicEX]
+EnableMetadataEnhancement = true
+```
+
+Leave this option disabled if a folder is a manually assembled playlist containing songs from unrelated albums. When enhancement is enabled, MusicEX also detects multiple distinct Album tags in one folder and preserves that folder's name, filename order, and folder artwork instead of adopting the first track's album information.
 
 ## Album Artwork
 

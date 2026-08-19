@@ -57,26 +57,43 @@ namespace Boxroom_MusicEX
                 // which misses album title, track title, track number, and embedded pictures.
                 List<TrackMetadata> tracks = album.TrackPaths.Select(ReadTrackMetadata).ToList();
 
+                // More than one distinct Album tag means this folder is probably a hand-made
+                // playlist rather than one release. In that case, preserve the folder identity,
+                // original filename order, and folder artwork instead of letting the first song
+                // redefine the entire BOXROOM case.
+                bool isMixedAlbumPlaylist = tracks
+                    .Select(track => Clean(track.Album))
+                    .Where(value => !string.IsNullOrWhiteSpace(value))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Take(2)
+                    .Count() > 1;
+
                 // Tagged track numbers are the standard playback order. Untagged files follow in
                 // filename order, preserving predictable behavior for plain WAV collections.
-                List<string> orderedPaths = tracks
-                    .OrderBy(track => track.TrackNumber.HasValue && track.TrackNumber.Value > 0 ? 0 : 1)
-                    .ThenBy(track => track.TrackNumber ?? uint.MaxValue)
-                    .ThenBy(track => Path.GetFileName(track.Path), StringComparer.OrdinalIgnoreCase)
-                    .Select(track => track.Path).ToList();
-                TrackPathsProperty.SetValue(album, orderedPaths);
+                if (!isMixedAlbumPlaylist)
+                {
+                    List<string> orderedPaths = tracks
+                        .OrderBy(track => track.TrackNumber.HasValue && track.TrackNumber.Value > 0 ? 0 : 1)
+                        .ThenBy(track => track.TrackNumber ?? uint.MaxValue)
+                        .ThenBy(track => Path.GetFileName(track.Path), StringComparer.OrdinalIgnoreCase)
+                        .Select(track => track.Path).ToList();
+                    TrackPathsProperty.SetValue(album, orderedPaths);
+                }
 
                 // AlbumArtist is preferred over per-track Artist because compilations often have
                 // a different performer on every song but one consistent release artist.
-                string taggedAlbum = FirstPopulated(tracks.Select(track => track.Album));
-                string taggedArtist = FirstPopulated(tracks.Select(track => track.AlbumArtist));
-                if (string.IsNullOrWhiteSpace(taggedArtist)) taggedArtist = FirstPopulated(tracks.Select(track => track.Artist));
+                string taggedAlbum = isMixedAlbumPlaylist ? string.Empty : FirstPopulated(tracks.Select(track => track.Album));
+                string taggedArtist = isMixedAlbumPlaylist
+                    ? CommonPopulated(tracks.Select(track => FirstPopulated(new[] { track.AlbumArtist, track.Artist })))
+                    : FirstPopulated(tracks.Select(track => track.AlbumArtist));
+                if (!isMixedAlbumPlaylist && string.IsNullOrWhiteSpace(taggedArtist))
+                    taggedArtist = FirstPopulated(tracks.Select(track => track.Artist));
 
                 InferFolderMetadata(album.FolderPath, taggedAlbum, taggedArtist, out string albumTitle, out string artist);
                 DisplayNameProperty.SetValue(album, albumTitle);
                 ArtistProperty.SetValue(album, artist);
                 // This updates both front-cover bytes and the list BOXROOM paints inside a case.
-                ApplyArtwork(album, tracks);
+                ApplyArtwork(album, tracks, allowEmbeddedCover: !isMixedAlbumPlaylist);
             }
             catch (Exception exception)
             {
@@ -187,14 +204,17 @@ namespace Boxroom_MusicEX
             }
         }
 
-        private static void ApplyArtwork(AlbumData album, IReadOnlyList<TrackMetadata> tracks)
+        private static void ApplyArtwork(AlbumData album, IReadOnlyList<TrackMetadata> tracks, bool allowEmbeddedCover)
         {
             // Deduplicate embedded art repeated in every track of an album. Comparing bytes costs
             // little here and avoids loading the same large cover into memory many times.
             var embedded = new List<EmbeddedPicture>();
-            foreach (TrackMetadata track in tracks)
-                foreach (EmbeddedPicture picture in track.Pictures)
-                    if (!embedded.Any(existing => ByteArraysEqual(existing.Bytes, picture.Bytes))) embedded.Add(picture);
+            if (allowEmbeddedCover)
+            {
+                foreach (TrackMetadata track in tracks)
+                    foreach (EmbeddedPicture picture in track.Pictures)
+                        if (!embedded.Any(existing => ByteArraysEqual(existing.Bytes, picture.Bytes))) embedded.Add(picture);
+            }
 
             // File discovery is deliberately limited to the album folder. Artwork in an artist
             // parent should not leak into every child album.
@@ -206,7 +226,9 @@ namespace Boxroom_MusicEX
             {
                 // Never overwrite a cover BOXROOM already loaded. If it has none, prefer the
                 // embedded FrontCover picture, then any embedded picture, then a suitable file.
-                EmbeddedPicture front = embedded.FirstOrDefault(picture => picture.IsFrontCover) ?? embedded.FirstOrDefault();
+                EmbeddedPicture front = allowEmbeddedCover
+                    ? embedded.FirstOrDefault(picture => picture.IsFrontCover) ?? embedded.FirstOrDefault()
+                    : null;
                 if (front != null)
                 {
                     selectedEmbeddedCover = front.Bytes;
@@ -313,6 +335,16 @@ namespace Boxroom_MusicEX
         private static string FirstPopulated(IEnumerable<string> values) =>
             values?.Select(Clean).FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
 
+        private static string CommonPopulated(IEnumerable<string> values)
+        {
+            string[] distinct = values.Select(Clean)
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(2)
+                .ToArray();
+            return distinct.Length == 1 ? distinct[0] : string.Empty;
+        }
+
         private static string Clean(string value) => string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
 
         private sealed class TrackMetadata
@@ -343,6 +375,13 @@ namespace Boxroom_MusicEX
         /// </summary>
         private static bool Prefix(List<string> paths, ref string __result)
         {
+            // Returning true preserves BOXROOM's original filename-based list when the optional
+            // metadata feature is disabled.
+            if (Core.EnableMetadataEnhancement?.Value != true)
+            {
+                return true;
+            }
+
             __result = AlbumMetadataEnhancer.BuildTrackList(paths);
             return false;
         }
