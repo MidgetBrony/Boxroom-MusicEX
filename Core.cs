@@ -1,6 +1,6 @@
 ﻿using MelonLoader;
 
-[assembly: MelonInfo(typeof(Boxroom_MusicEX.Core), "Boxroom-MusicEX", "1.2.0", "MidgetBrony", null)]
+[assembly: MelonInfo(typeof(Boxroom_MusicEX.Core), "Boxroom-MusicEX", "1.2.1", "MidgetBrony", null)]
 [assembly: MelonGame("NestedLoop", "BOXROOM")]
 
 namespace Boxroom_MusicEX
@@ -91,12 +91,12 @@ namespace Boxroom_MusicEX
                 .Clear()
                 .AddToggle(
                     "enable-metadata",
-                    "Enable embedded metadata",
+                    "Use embedded music metadata",
                     () => EnableMetadataEnhancement?.Value == true,
                     enabled => SetMetadataEnhancement(enabled, rescanLibrary: true))
                 .AddLabel(
                     "metadata-warning",
-                    "Warning: playlist folders can contain conflicting album tags. MusicEX detects mixed-album folders and preserves their folder name, filename order, and folder artwork.");
+                    "ON: Uses embedded album, artist, track title, track number, and artwork tags. Best when each folder is one real album.\n\nOFF: Keeps BOXROOM's folder-based album names, filename order, and folder artwork. Recommended for playlist or mix folders.");
         }
     }
 }

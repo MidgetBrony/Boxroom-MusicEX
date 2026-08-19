@@ -6,8 +6,8 @@
 		<RootNamespace>Boxroom_MusicEX</RootNamespace>
 		<LangVersion>default</LangVersion>
 		<IsPackable>false</IsPackable>
-		<AssemblyVersion>1.2.0.0</AssemblyVersion>
-		<FileVersion>1.2.0.0</FileVersion>
+		<AssemblyVersion>1.2.1.0</AssemblyVersion>
+		<FileVersion>1.2.1.0</FileVersion>
 		<NeutralLanguage>en-US</NeutralLanguage>
 		<AssemblyName>Boxroom_MusicEX</AssemblyName>
 		<PlatformTarget>x64</PlatformTarget>

@@ -70,9 +70,11 @@ To enable embedded album, artist, track-number, track-title, and artwork metadat
 1. Open BOXROOM's **Mods** tab.
 2. Select **Mod Settings**.
 3. Open the **BOXROOM MusicEX** section.
-4. Enable **Enable embedded metadata**. MusicEX immediately rescans the Albums library.
+4. Enable **Use embedded music metadata**. MusicEX immediately rescans the Albums library.
 
-The warning beneath the setting explains that playlist folders may contain conflicting album tags. Disabling the checkbox also rescans immediately and restores BOXROOM's folder-based album names and ordering.
+When **ON**, MusicEX uses embedded album, artist, track-title, track-number, and artwork tags. This is best when each folder represents one real album.
+
+When **OFF**, MusicEX keeps BOXROOM's folder-based album names, filename order, and folder artwork. This is recommended for playlist or mix folders. Disabling the checkbox rescans immediately to restore that behavior.
 
 Advanced users can set the same preference manually in `UserData\MelonPreferences.cfg`:
 
