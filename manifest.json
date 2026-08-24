@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "boxroom-musicex",
+  "name": "BOXROOM MusicEX",
+  "author": "MidgetBrony",
+  "description": "Nested music libraries, embedded metadata, expanded artwork, and improved album organization for BOXROOM.",
+  "repository": "https://github.com/MidgetBrony/Boxroom-MusicEX",
+  "requirements": { "melonLoader": "0.7.0" },
+  "dependencies": [
+    {
+      "manifest": "https://raw.githubusercontent.com/MidgetBrony/ModsPanel/refs/heads/master/manifest.json",
+      "minimumVersion": "2.2.1",
+      "required": true
+    }
+  ],
+  "release": {
+    "provider": "github",
+    "asset": "Boxroom_MusicEX*.zip",
+    "destination": "Mods"
+  }
+}
