@@ -1,6 +1,6 @@
 ﻿using MelonLoader;
 
-[assembly: MelonInfo(typeof(Boxroom_MusicEX.Core), "Boxroom-MusicEX", "1.2.1", "MidgetBrony", null)]
+[assembly: MelonInfo(typeof(Boxroom_MusicEX.Core), "Boxroom-MusicEX", "1.3.0", "MidgetBrony", null)]
 [assembly: MelonGame("NestedLoop", "BOXROOM")]
 
 namespace Boxroom_MusicEX
@@ -20,6 +20,7 @@ namespace Boxroom_MusicEX
         /// folder names and ordering.
         /// </summary>
         internal static MelonPreferences_Entry<bool> EnableMetadataEnhancement;
+        internal static MelonPreferences_Entry<float> AudioDistance;
 
         private static bool metadataHandlerSubscribed;
 
@@ -31,6 +32,9 @@ namespace Boxroom_MusicEX
                 false,
                 "Enable album metadata enhancement",
                 "Reads embedded album/artist/title/track-number/artwork tags. Disable for playlist folders containing songs from different albums.");
+            AudioDistance = preferences.CreateEntry(
+                "AudioDistance", 8f, "Radio and album audio distance",
+                "Maximum audible distance for BOXROOM radio and album playback.");
 
             RegisterModsPanelSettings();
 
@@ -48,6 +52,8 @@ namespace Boxroom_MusicEX
             // retain the mod instance and call stale code after a reload.
             SetMetadataHandlerSubscription(false);
         }
+
+        public override void OnUpdate() => RadioDistanceController.Update();
 
         /// <summary>
         /// Updates the preference and the live event subscription, then rebuilds the album
@@ -94,6 +100,12 @@ namespace Boxroom_MusicEX
                     "Use embedded music metadata",
                     () => EnableMetadataEnhancement?.Value == true,
                     enabled => SetMetadataEnhancement(enabled, rescanLibrary: true))
+                .AddSlider(
+                    "audio-distance",
+                    "Radio / album audio distance",
+                    () => AudioDistance?.Value ?? 8f,
+                    value => { AudioDistance.Value = UnityEngine.Mathf.Clamp(value, 1f, 25f); MelonPreferences.Save(); },
+                    1f, 25f, false, "0.0 m")
                 .AddLabel(
                     "metadata-warning",
                     "ON: Uses embedded album, artist, track title, track number, and artwork tags. Best when each folder is one real album.\n\nOFF: Keeps BOXROOM's folder-based album names, filename order, and folder artwork. Recommended for playlist or mix folders.");

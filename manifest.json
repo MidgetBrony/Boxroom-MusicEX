@@ -15,7 +15,8 @@
   ],
   "release": {
     "provider": "github",
-    "asset": "Boxroom_MusicEX*.zip",
+    "asset": "Boxroom_MusicEX-*.zip",
+    "checksumAsset": "SHA256SUMS.txt",
     "destination": "Mods"
   }
 }

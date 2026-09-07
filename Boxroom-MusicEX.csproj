@@ -6,8 +6,9 @@
 		<RootNamespace>Boxroom_MusicEX</RootNamespace>
 		<LangVersion>default</LangVersion>
 		<IsPackable>false</IsPackable>
-		<AssemblyVersion>1.2.1.0</AssemblyVersion>
-		<FileVersion>1.2.1.0</FileVersion>
+		<AssemblyVersion>1.3.0.0</AssemblyVersion>
+		<FileVersion>1.3.0.0</FileVersion>
+		<Version>1.3.0</Version>
 		<NeutralLanguage>en-US</NeutralLanguage>
 		<AssemblyName>Boxroom_MusicEX</AssemblyName>
 		<PlatformTarget>x64</PlatformTarget>
@@ -454,10 +455,11 @@
 		<Compile Include="Core.cs" />
 		<Compile Include="AlbumMetadataEnhancer.cs" />
 		<Compile Include="RecursiveAlbumScanPatch.cs" />
+		<Compile Include="RadioDistanceController.cs" />
 		<Content Include="Directory.Build.props" />
 	</ItemGroup>
 	
-	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
+	<Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(SkipGameDeploy)' != 'true'">
 		<Exec Command="COPY &quot;$(TargetPath)&quot; &quot;$(GamePath)/Mods&quot;" />
 	</Target>
 </Project>

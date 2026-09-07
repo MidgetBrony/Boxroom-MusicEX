@@ -12,6 +12,7 @@ MusicEX improves the Albums music library in BOXROOM. It scans nested music fold
 - Uses embedded front-cover artwork when no cover file exists.
 - Uses additional folder or embedded images on the inside of the open album case.
 - Falls back to common folder layouts when tags are missing.
+- Provides a live distance control for BOXROOM radio and album audio.
 
 ## Installation
 
@@ -84,6 +85,10 @@ EnableMetadataEnhancement = true
 ```
 
 Leave this option disabled if a folder is a manually assembled playlist containing songs from unrelated albums. When enhancement is enabled, MusicEX also detects multiple distinct Album tags in one folder and preserves that folder's name, filename order, and folder artwork instead of adopting the first track's album information.
+
+## Radio and Album Audio Distance
+
+Open **Mods → Mod Settings → BOXROOM MusicEX** and adjust **Radio / album audio distance** to control how far radio and album playback carries through the room. The range is 1–25 metres and defaults to 8 metres. Changes apply while audio is playing and are saved in MelonPreferences.
 
 ## Album Artwork
 
