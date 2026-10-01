@@ -7,6 +7,7 @@ using HarmonyLib;
 using MelonLoader;
 using SteamShelf.Media.Albums;
 using TagLibSharp2.Core;
+using UnityEngine;
 
 namespace Boxroom_MusicEX
 {
@@ -33,6 +34,8 @@ namespace Boxroom_MusicEX
         private static readonly PropertyInfo CoverBytesProperty = AccessTools.Property(typeof(AlbumData), nameof(AlbumData.CoverArtBytes));
         private static readonly PropertyInfo CoverLoadedProperty = AccessTools.Property(typeof(AlbumData), nameof(AlbumData.CoverArtLoaded));
         private static readonly PropertyInfo ExtraArtProperty = AccessTools.Property(typeof(AlbumData), nameof(AlbumData.ExtraArtBytes));
+        private static readonly PropertyInfo ProviderDataProperty = AccessTools.Property(typeof(AlbumDataProvider), nameof(AlbumDataProvider.Data));
+        private static readonly MethodInfo NotifyMetadataReadyMethod = AccessTools.Method(typeof(AlbumDataProvider), "NotifyMetadataReady");
 
         // Unity's runtime image loader reliably accepts these formats in BOXROOM.
         private static readonly string[] ImageExtensions = { ".png", ".jpg", ".jpeg" };
@@ -149,7 +152,8 @@ namespace Boxroom_MusicEX
                             metadata.Pictures.Add(new EmbeddedPicture
                             {
                                 Bytes = bytes,
-                                IsFrontCover = picture.PictureType.ToString().Equals("FrontCover", StringComparison.OrdinalIgnoreCase)
+                                IsFrontCover = picture.PictureType.ToString().Equals("FrontCover", StringComparison.OrdinalIgnoreCase),
+                                IsGenericCover = picture.PictureType.ToString().Equals("Other", StringComparison.OrdinalIgnoreCase)
                             });
                         }
                     }
@@ -220,19 +224,21 @@ namespace Boxroom_MusicEX
             // parent should not leak into every child album.
             string[] imageFiles = GetImageFiles(album.FolderPath);
             string selectedCoverFile = FindLikelyCoverFile(imageFiles);
-            byte[] selectedEmbeddedCover = null;
+            bool needsCover = !album.CoverArtLoaded || album.CoverArtBytes == null || album.CoverArtBytes.Length == 0;
+            EmbeddedPicture selectedEmbeddedCover = allowEmbeddedCover
+                ? embedded.FirstOrDefault(picture => picture.IsFrontCover)
+                    ?? embedded.FirstOrDefault(picture => picture.IsGenericCover)
+                : null;
+            if (selectedEmbeddedCover == null && allowEmbeddedCover && needsCover)
+                selectedEmbeddedCover = embedded.FirstOrDefault();
 
-            if (!album.CoverArtLoaded || album.CoverArtBytes == null || album.CoverArtBytes.Length == 0)
+            if (needsCover)
             {
                 // Never overwrite a cover BOXROOM already loaded. If it has none, prefer the
                 // embedded FrontCover picture, then any embedded picture, then a suitable file.
-                EmbeddedPicture front = allowEmbeddedCover
-                    ? embedded.FirstOrDefault(picture => picture.IsFrontCover) ?? embedded.FirstOrDefault()
-                    : null;
-                if (front != null)
+                if (selectedEmbeddedCover != null)
                 {
-                    selectedEmbeddedCover = front.Bytes;
-                    CoverBytesProperty.SetValue(album, front.Bytes);
+                    CoverBytesProperty.SetValue(album, selectedEmbeddedCover.Bytes);
                     CoverLoadedProperty.SetValue(album, true);
                 }
                 else if (selectedCoverFile != null)
@@ -260,11 +266,60 @@ namespace Boxroom_MusicEX
             {
                 // Do not repeat the exterior/front cover on the inside unless a separate disk
                 // image file explicitly contains the same art.
-                if (ByteArraysEqual(picture.Bytes, selectedEmbeddedCover) || picture.IsFrontCover) continue;
+                if (ReferenceEquals(picture, selectedEmbeddedCover) || picture.IsFrontCover) continue;
                 AddUnique(extras, picture.Bytes);
                 if (extras.Count >= MaximumExtraImages) break;
             }
             ExtraArtProperty.SetValue(album, extras);
+            RefreshLiveAlbumProviders(album);
+        }
+
+        /// <summary>
+        /// BOXROOM chooses the next extra_N filename from ExtraArtBytes.Count. Metadata images
+        /// also live in that list, so temporarily reduce it to the contiguous on-disk sequence
+        /// before BOXROOM writes a user screenshot. The normal OnAlbumReady enrichment rebuilds
+        /// the complete folder-plus-metadata list immediately afterwards.
+        /// </summary>
+        internal static void PrepareForUserExtraArt(AlbumData album)
+        {
+            if (album == null || string.IsNullOrWhiteSpace(album.FolderPath)) return;
+
+            var persisted = new List<byte[]>();
+            for (int index = 0; index < MaximumExtraImages; index++)
+            {
+                string path = FindPersistedExtraPath(album.FolderPath, index);
+                if (path == null) break;
+                byte[] bytes = TryReadImage(path);
+                if (bytes == null) break;
+                persisted.Add(bytes);
+            }
+            ExtraArtProperty.SetValue(album, persisted);
+        }
+
+        private static string FindPersistedExtraPath(string folderPath, int index)
+        {
+            string jpg = Path.Combine(folderPath, $"extra_{index}.jpg");
+            if (File.Exists(jpg)) return jpg;
+            string png = Path.Combine(folderPath, $"extra_{index}.png");
+            return File.Exists(png) ? png : null;
+        }
+
+        private static void RefreshLiveAlbumProviders(AlbumData album)
+        {
+            if (album == null || ProviderDataProperty == null || NotifyMetadataReadyMethod == null) return;
+            try
+            {
+                foreach (AlbumDataProvider provider in Resources.FindObjectsOfTypeAll<AlbumDataProvider>())
+                {
+                    if (provider == null || provider.AlbumId != album.Id) continue;
+                    ProviderDataProperty.SetValue(provider, album);
+                    NotifyMetadataReadyMethod.Invoke(provider, null);
+                }
+            }
+            catch (Exception exception)
+            {
+                MelonLogger.Warning($"[MusicEX] Could not refresh album artwork for '{album.FolderPath}': {exception.Message}");
+            }
         }
 
         private static string[] GetImageFiles(string folderPath)
@@ -363,6 +418,17 @@ namespace Boxroom_MusicEX
         {
             internal byte[] Bytes;
             internal bool IsFrontCover;
+            internal bool IsGenericCover;
+        }
+    }
+
+    [HarmonyPatch(typeof(AlbumLibrarySystem), nameof(AlbumLibrarySystem.ApplyUserExtraArt))]
+    internal static class AlbumUserExtraArtPatch
+    {
+        private static void Prefix(AlbumData album)
+        {
+            if (Core.EnableMetadataEnhancement?.Value == true)
+                AlbumMetadataEnhancer.PrepareForUserExtraArt(album);
         }
     }
 

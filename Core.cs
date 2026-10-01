@@ -1,6 +1,6 @@
 ﻿using MelonLoader;
 
-[assembly: MelonInfo(typeof(Boxroom_MusicEX.Core), "Boxroom-MusicEX", "1.3.0", "MidgetBrony", null)]
+[assembly: MelonInfo(typeof(Boxroom_MusicEX.Core), "Boxroom-MusicEX", "1.3.1", "MidgetBrony", null)]
 [assembly: MelonGame("NestedLoop", "BOXROOM")]
 
 namespace Boxroom_MusicEX

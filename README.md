@@ -2,6 +2,8 @@
 
 MusicEX improves the Albums music library in BOXROOM. It scans nested music folders, reads standard audio metadata, finds more kinds of album artwork, and uses additional images inside the open album case.
 
+Version 1.3.1 keeps user-added screenshots in BOXROOM's contiguous `extra_0`, `extra_1`, ... sequence when metadata mode is enabled, prevents a generically tagged embedded cover from appearing as interior artwork, and refreshes a live album case after artwork changes.
+
 ## Features
 
 - Recursively finds albums below the selected music-library folder.
